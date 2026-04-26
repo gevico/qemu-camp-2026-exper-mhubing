@@ -781,3 +781,21 @@ done:
 }
 
 #endif /* !CONFIG_USER_ONLY */
+
+void helper_sort(CPURISCVState *env, target_ulong sort_len,
+                target_ulong arr_base, target_ulong arr_size)
+{
+    MemOpIdx oi = make_memop_idx(MO_TEUL, riscv_env_mmu_index(env, false));
+    for (int i = 0; i < sort_len - 1; i++) {
+        for (int j = 0; j < sort_len - i - 1; j++) {
+            target_ulong cur_addr = arr_base + j * sizeof(int);
+            target_ulong next_addr = arr_base + (j + 1) *sizeof(int);
+            int cur_val = cpu_ldl_mmu(env, cur_addr, oi, GETPC());
+            int next_val = cpu_ldl_mmu(env, next_addr, oi, GETPC());
+            if (cur_val > next_val) {
+                cpu_stl_mmu(env, next_addr, cur_val, oi, GETPC());
+                cpu_stl_mmu(env, cur_addr, next_val, oi, GETPC());                
+            }
+        }
+    }
+}

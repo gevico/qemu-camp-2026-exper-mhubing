@@ -1277,3 +1277,15 @@ static bool trans_dma(DisasContext *ctx, arg_dma *a)
 
     return true;
 }
+
+static bool trans_sort(DisasContext *ctx, arg_sort *a)
+{
+    TCGv sort_len = get_gpr(ctx, a->rd, EXT_NONE);
+    TCGv arr_base = get_gpr(ctx, a->rs1, EXT_NONE);
+    TCGv arr_size = get_gpr(ctx, a->rs2, EXT_NONE);
+
+    decode_save_opc(ctx, 0);
+    gen_helper_sort(tcg_env, sort_len, arr_base, arr_size); 
+
+    return true;
+}
