@@ -1223,3 +1223,57 @@ static bool trans_csrrci(DisasContext *ctx, arg_csrrci * a)
                              ctx->zero, ctx->zero, mask, ctx->zero);
     }
 }
+
+static bool trans_dma(DisasContext *ctx, arg_dma *a)
+{
+    TCGv dst_base = get_gpr(ctx, a->rd, EXT_NONE);
+    TCGv src_base = get_gpr(ctx, a->rs1, EXT_NONE);
+    TCGv grain = get_gpr(ctx, a->rs2, EXT_NONE);
+    TCGv const_grain = tcg_constant_tl(8);
+    tcg_gen_shl_tl(grain, const_grain, grain);
+
+    TCGv loop_i = tcg_temp_new();
+    TCGv loop_j = tcg_temp_new();
+    TCGLabel *label_i = gen_new_label();
+    TCGLabel *label_j = gen_new_label();
+
+    /* loop_i = 0; */
+    tcg_gen_movi_tl(loop_i, 0);
+    gen_set_label(label_i);
+
+    /* loop_j = 0 */
+    tcg_gen_movi_tl(loop_j, 0);
+    gen_set_label(label_j);
+    
+    /* src_offset = i * n + j */
+    TCGv src_offset = tcg_temp_new();
+    tcg_gen_mul_tl(src_offset, loop_i, grain);
+    tcg_gen_add_tl(src_offset, src_offset, loop_j);
+    tcg_gen_shli_tl(src_offset, src_offset, 2);
+
+    /* dst_offset = j * n + i */
+    TCGv dst_offset = tcg_temp_new();
+    tcg_gen_mul_tl(dst_offset, loop_j, grain);
+    tcg_gen_add_tl(dst_offset, dst_offset, loop_i);
+    tcg_gen_shli_tl(dst_offset, dst_offset, 2);
+
+    TCGv src_addr = tcg_temp_new();
+    tcg_gen_add_tl(src_addr, src_base, src_offset);
+
+    TCGv dst_addr = tcg_temp_new();
+    tcg_gen_add_tl(dst_addr, dst_base, dst_offset);
+
+    /* dst[j * n + i] = src[i * n + j] */
+    TCGv src_val = tcg_temp_new();
+    tcg_gen_qemu_ld_tl(src_val, src_addr, ctx->mem_idx, MO_TEUL);
+    tcg_gen_qemu_st_tl(src_val, dst_addr, ctx->mem_idx, MO_TEUL);
+
+    /* j++; */
+    tcg_gen_addi_tl(loop_j, loop_j, 1);
+    tcg_gen_brcond_tl(TCG_COND_LT, loop_j, grain, label_j);
+    /* i++; */
+    tcg_gen_addi_tl(loop_i, loop_i, 1);
+    tcg_gen_brcond_tl(TCG_COND_LT, loop_i, grain, label_i);
+
+    return true;
+}
