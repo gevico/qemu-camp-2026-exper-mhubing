@@ -822,3 +822,17 @@ void helper_crush(CPURISCVState *env, target_ulong dst_base,
         cpu_stb_mmu(env, dst_addr, src_data_low, oi, GETPC());
     }
 }
+
+void helper_expand(CPURISCVState *env, target_ulong dst_base,
+                target_ulong src_base, target_ulong len)
+{
+    MemOpIdx oi = make_memop_idx(MO_TEUL, riscv_env_mmu_index(env, false));
+
+    for (int i = 0; i < len; i++) {
+        target_ulong src_addr = src_base + i * sizeof(uint8_t);
+        target_ulong dst_addr = dst_base + (2 * i) * sizeof(uint8_t);
+        uint8_t src_data = cpu_ldb_mmu(env, src_addr, oi, GETPC());
+        cpu_stb_mmu(env, dst_addr, src_data & 0x0F, oi, GETPC());
+        cpu_stb_mmu(env, dst_addr + sizeof(uint8_t), (src_data >> 4) & 0x0F, oi, GETPC());
+    }
+}

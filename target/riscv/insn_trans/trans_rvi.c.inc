@@ -1301,3 +1301,15 @@ static bool trans_crush(DisasContext *ctx, arg_sort *a)
 
     return true;
 }
+
+static bool trans_expand(DisasContext *ctx, arg_sort *a)
+{
+    TCGv dst = get_gpr(ctx, a->rd, EXT_NONE);
+    TCGv src = get_gpr(ctx, a->rs1, EXT_NONE);
+    TCGv len = get_gpr(ctx, a->rs2, EXT_NONE);
+
+    decode_save_opc(ctx, 0);
+    gen_helper_expand(tcg_env, dst, src, len); 
+
+    return true;
+}
