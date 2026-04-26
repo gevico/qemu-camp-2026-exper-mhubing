@@ -799,3 +799,26 @@ void helper_sort(CPURISCVState *env, target_ulong sort_len,
         }
     }
 }
+
+void helper_crush(CPURISCVState *env, target_ulong dst_base,
+                target_ulong src_base, target_ulong len)
+{
+    MemOpIdx oi = make_memop_idx(MO_TEUL, riscv_env_mmu_index(env, false));
+
+    int out_len = (len + 1) / 2;
+    for (int i = 0; i < len / 2; i++) {
+        target_ulong src_addr = src_base + (2 * i) * sizeof(uint8_t);
+        target_ulong dst_addr = dst_base + i * sizeof(uint8_t);
+        uint8_t src_data_low = cpu_ldb_mmu(env, src_addr, oi, GETPC()) & 0xF;
+        uint8_t src_data_high = cpu_ldb_mmu(env, src_addr + sizeof(uint8_t), oi, GETPC()) & 0xF;
+
+        cpu_stb_mmu(env, dst_addr, src_data_low | (src_data_high << 4), oi, GETPC());
+    }
+    if (len & 1) {
+        target_ulong src_addr = src_base + (len - 1) * sizeof(uint8_t);
+        target_ulong dst_addr = dst_base + (out_len - 1) * sizeof(uint8_t);
+        uint8_t src_data_low = cpu_ldb_mmu(env, src_addr, oi, GETPC()) & 0xF;
+
+        cpu_stb_mmu(env, dst_addr, src_data_low, oi, GETPC());
+    }
+}
