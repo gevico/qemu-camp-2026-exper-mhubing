@@ -27,6 +27,7 @@
 #include "exec/helper-proto.h"
 #include "exec/tlb-flags.h"
 #include "trace.h"
+#include <stdint.h>
 
 #ifndef CONFIG_USER_ONLY
 static inline MemOp mo_endian_env(CPURISCVState *env)
@@ -835,4 +836,20 @@ void helper_expand(CPURISCVState *env, target_ulong dst_base,
         cpu_stb_mmu(env, dst_addr, src_data & 0x0F, oi, GETPC());
         cpu_stb_mmu(env, dst_addr + sizeof(uint8_t), (src_data >> 4) & 0x0F, oi, GETPC());
     }
+}
+
+target_ulong helper_vdot(CPURISCVState *env, target_ulong vec_a, target_ulong vec_b)
+{
+    MemOpIdx oi = make_memop_idx(MO_TEUL, riscv_env_mmu_index(env, false));
+
+    target_long acc = 0;
+    for (int i = 0; i < 16; i++) {
+        target_ulong src_addr = vec_a + i * sizeof(int);
+        target_ulong dst_addr = vec_b + i * sizeof(int);
+        long src_data = (int32_t)cpu_ldl_mmu(env, src_addr, oi, GETPC());
+        long dst_data = (int32_t)cpu_ldl_mmu(env, dst_addr, oi, GETPC());
+        acc += src_data * dst_data;
+    }
+
+    return acc;
 }

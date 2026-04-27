@@ -1313,3 +1313,17 @@ static bool trans_expand(DisasContext *ctx, arg_sort *a)
 
     return true;
 }
+
+static bool trans_vdot(DisasContext *ctx, arg_vdot *a)
+{
+    TCGv acc = tcg_temp_new();
+    TCGv vec_a = get_gpr(ctx, a->rs1, EXT_NONE);
+    TCGv vec_b = get_gpr(ctx, a->rs2, EXT_NONE);
+
+    decode_save_opc(ctx, 0);
+
+    gen_helper_vdot(acc, tcg_env, vec_a, vec_b); 
+    gen_set_gpr(ctx, a->rd, acc);
+
+    return true;
+}
